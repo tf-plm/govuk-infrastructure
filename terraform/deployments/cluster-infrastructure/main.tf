@@ -7,12 +7,12 @@
 # See https://github.com/alphagov/govuk-infrastructure/blob/main/docs/architecture/decisions/0003-split-terraform-state-into-separate-aws-cluster-and-kubernetes-resource-phases.md
 
 terraform {
-  cloud {
-    organization = "govuk"
-    workspaces {
-      tags = ["cluster-infrastructure", "eks", "aws"]
-    }
-  }
+  # cloud {
+  #   organization = "govuk"
+  #   workspaces {
+  #     tags = ["cluster-infrastructure", "eks", "aws"]
+  #   }
+  # }
   required_version = "~> 1.10"
   required_providers {
     aws = {
@@ -41,9 +41,9 @@ locals {
 
   default_cluster_addons = {
     coredns        = { most_recent = true }
-    kube-proxy     = { most_recent = true }
-    metrics-server = { most_recent = true }
-    vpc-cni        = { most_recent = true }
+    # kube-proxy     = { most_recent = true }
+    # metrics-server = { most_recent = true }
+    # vpc-cni        = { most_recent = true }
   }
 
   kube_state_metrics_addon = {
@@ -106,14 +106,16 @@ locals {
   }
 
 
-  eks_managed_node_groups = merge(var.enable_x86_workers ? local.x86_managed_node_group : {}, var.enable_arm_workers_blue ? local.arm_managed_node_group_blue : {}, var.enable_arm_workers ? local.arm_managed_node_group : {})
+  # triggers for_each module within the "eks" module
+  eks_managed_node_groups = local.x86_managed_node_group
+  # eks_managed_node_groups = merge(var.enable_x86_workers ? local.x86_managed_node_group : {}, var.enable_arm_workers_blue ? local.arm_managed_node_group_blue : {}, var.enable_arm_workers ? local.arm_managed_node_group : {})
 }
 
 provider "aws" {
   region = "eu-west-1"
   default_tags {
     tags = {
-      product              = "govuk"
+      product              = "govuk-bench"
       system               = "govuk-platform-engineering"
       service              = "eks"
       environment          = var.govuk_environment
@@ -178,13 +180,18 @@ resource "aws_iam_role_policy_attachment" "pull_from_ecr" {
   role       = aws_iam_role.node.name
 }
 
-resource "aws_iam_role_policy_attachment" "node" {
-  for_each = toset([
-    "AmazonEKSWorkerNodePolicy",
-    "AmazonEKS_CNI_Policy",
-    "AmazonSSMManagedInstanceCore",
-  ])
-  policy_arn = "arn:aws:iam::aws:policy/${each.key}"
+resource "aws_iam_role_policy_attachment" "node1" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.node.name
+}
+
+resource "aws_iam_role_policy_attachment" "node2" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.node.name
+}
+
+resource "aws_iam_role_policy_attachment" "node3" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   role       = aws_iam_role.node.name
 }
 
@@ -195,7 +202,7 @@ module "eks" {
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
   subnet_ids      = [for s in aws_subnet.eks_control_plane : s.id]
-  vpc_id          = data.tfe_outputs.vpc.nonsensitive_values.id
+  vpc_id          = var.tfe_outputs_vpc_nonsensitive_values.id
 
   cluster_addons = local.enabled_cluster_addons
 

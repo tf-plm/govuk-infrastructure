@@ -1,11 +1,74 @@
-variable "govuk_aws_state_bucket" {
-  type        = string
-  description = "The name of the S3 bucket used for govuk-aws's Terraform state files."
+# variable "govuk_aws_state_bucket" {
+#   type        = string
+#   description = "The name of the S3 bucket used for govuk-aws's Terraform state files."
+# }
+
+# port of `data "tfe_outputs" "vpc" {`
+variable "tfe_outputs_vpc_nonsensitive_values" {
+  type      = object({
+    id                              = string,
+    internet_gateway_id             = string,
+    private_subnet_route_table_ids  = list(string)
+    private_subnet_ids              = list(string)
+  })
+  default   = {
+    id                              = "vpc_id"
+    internet_gateway_id             = "vpc_internet_gateway_id"
+    private_subnet_route_table_ids  = [ "vpc_private_subnet_route_table_id" ]
+    private_subnet_ids              = [ "rds_toto" ]
+  }
+}
+
+# port of `data "tfe_outputs" "root_dns" {`
+variable "tfe_outputs_root_dns_nonsensitive_values" {
+  type      = object({
+    internal_root_zone_id   = string
+    internal_root_zone_name = string
+    external_root_zone_id   = string
+    external_root_zone_name = string
+  })
+  default   = {
+    internal_root_zone_id   = "rootdns_internal_id"
+    internal_root_zone_name = "rootdns_internal_name"
+    external_root_zone_id   = "rootdns_external_id"
+    external_root_zone_name = "rootdns_external_name"
+  }
+}
+
+# port of `data "aws_secretsmanager_secret" "slack_email" {`
+variable "aws_secretsmanager_secret_slack_email" {
+  type    = list(object({
+    id            = string
+    secret_string = string
+  }))
+  default = [
+    {
+      id            = "secret_slack_email_id"
+      secret_string = "secret_slack_email_secret_string"
+    }
+  ]
+}
+
+# port of `data "aws_secretsmanager_secret_version" "slack_email" {`
+variable "aws_secretsmanager_secret_version_slack_email" {
+  type    = list(
+    object({
+      id            = string
+      secret_string = string
+    })
+  )
+  default = [
+    {
+      id            = "secret_version_slack_email_id"
+      secret_string = "secret_version_slack_email_secret_string"
+    }
+  ]
 }
 
 variable "cluster_log_retention_in_days" {
   type        = number
   description = "Number of days to retain cluster log events in CloudWatch."
+  default     = "3"
 }
 
 variable "cluster_name" {
@@ -17,21 +80,40 @@ variable "cluster_name" {
 variable "cluster_version" {
   type        = string
   description = "Kubernetes release version for the cluster, e.g. 1.21"
+  default     = "1.21"
 }
 
 variable "eks_control_plane_subnets" {
   type        = map(object({ az = string, cidr = string }))
   description = "Map of {subnet_name: {az=<az>, cidr=<cidr>}} for the public subnets for the EKS cluster's apiserver."
+  default     = {
+    "public-subnet" = {
+      az = "eu-west-1c"
+      cidr = "10.0.1.0/24"
+    }
+  }
 }
 
 variable "eks_private_subnets" {
   type        = map(object({ az = string, cidr = string }))
   description = "Map of {subnet_name: {az=<az>, cidr=<cidr>}} for the private subnets for the EKS cluster's nodes and pods."
+  default     = {
+    "public-subnet" = {
+      az = "eu-west-1c"
+      cidr = "10.0.2.0/24"
+    }
+  }
 }
 
 variable "eks_public_subnets" {
   type        = map(object({ az = string, cidr = string }))
   description = "Map of {subnet_name: {az=<az>, cidr=<cidr>}} for the public subnets where the EKS cluster will create Internet-facing load balancers."
+  default     = {
+    "public-subnet" = {
+      az = "eu-west-1c"
+      cidr = "10.0.3.0/24"
+    }
+  }
 }
 
 variable "external_dns_subdomain" {
@@ -43,6 +125,7 @@ variable "external_dns_subdomain" {
 variable "publishing_service_domain" {
   type        = string
   description = "FQDN of the user-facing domain for the publishing apps, e.g. staging.publishing.service.gov.uk. This domain is included as a wildcard SAN on the TLS cert for Ingresses etc."
+  default     = "testing.bplan.gov.uk"
 }
 
 variable "force_destroy" {
@@ -222,6 +305,7 @@ variable "secrets_recovery_window_in_days" {
 variable "govuk_environment" {
   type        = string
   description = "Acceptable values are test, integration, staging, production"
+  default     = "production"
 }
 
 variable "authentication_mode" {

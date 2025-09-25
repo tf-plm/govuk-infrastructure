@@ -1,12 +1,12 @@
-data "aws_secretsmanager_secret" "slack_email" {
-  count = startswith(var.govuk_environment, "eph-") ? 0 : 1
-  name  = "govuk/slack/platform-support-email"
-}
+# data "aws_secretsmanager_secret" "slack_email" {
+#   count = startswith(var.govuk_environment, "eph-") ? 0 : 1
+#   name  = "govuk/slack/platform-support-email"
+# }
 
-data "aws_secretsmanager_secret_version" "slack_email" {
-  count     = startswith(var.govuk_environment, "eph-") ? 0 : 1
-  secret_id = data.aws_secretsmanager_secret.slack_email[0].id
-}
+# data "aws_secretsmanager_secret_version" "slack_email" {
+#   count     = startswith(var.govuk_environment, "eph-") ? 0 : 1
+#   secret_id = data.aws_secretsmanager_secret.slack_email[0].id
+# }
 
 resource "aws_sns_topic" "slack_channel" {
   name         = "${var.cluster_name}-slack-alerts"
@@ -17,7 +17,7 @@ resource "aws_sns_topic_subscription" "slack_channel" {
   count     = startswith(var.govuk_environment, "eph-") ? 0 : 1
   topic_arn = aws_sns_topic.slack_channel.arn
   protocol  = "email"
-  endpoint  = data.aws_secretsmanager_secret_version.slack_email[0].secret_string
+  endpoint  = var.aws_secretsmanager_secret_version_slack_email[0].secret_string
 }
 
 resource "aws_cloudwatch_metric_alarm" "node_group_limit" {
