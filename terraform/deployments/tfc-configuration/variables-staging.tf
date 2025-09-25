@@ -29,12 +29,6 @@ module "variable-set-staging" {
       c = { az = "eu-west-1c", cidr = "10.12.32.0/22" }
     }
 
-    legacy_public_subnets = {
-      a = { az = "eu-west-1a", cidr = "10.12.1.0/24" }
-      b = { az = "eu-west-1b", cidr = "10.12.2.0/24" }
-      c = { az = "eu-west-1c", cidr = "10.12.3.0/24" }
-    }
-
     legacy_private_subnets = {
       a = { az = "eu-west-1a", cidr = "10.12.4.0/24", nat = true }
       b = { az = "eu-west-1b", cidr = "10.12.5.0/24", nat = true }
@@ -57,9 +51,8 @@ module "variable-set-staging" {
 
     enable_kube_state_metrics = false
 
-    enable_arm_workers  = true
-    enable_main_workers = false
-    enable_x86_workers  = true
+    enable_arm_workers = true
+    enable_x86_workers = true
 
     main_workers_instance_types = ["m6i.4xlarge", "m6a.4xlarge", "m6i.2xlarge", "m6a.2xlarge"]
 
@@ -114,13 +107,6 @@ module "variable-set-chat-staging" {
     chat_redis_cluster_multi_az_enabled           = false
     chat_redis_cluster_node_type                  = "cache.r6g.xlarge"
     chat_redis_cluster_num_cache_clusters         = "1"
-    cloudfront_create                             = true
-    cloudfront_enable                             = true
-    service_disabled                              = false
-    origin_chat_domain                            = "chat.eks.staging.govuk.digital"
-    origin_chat_id                                = "Chat origin"
-    cloudfront_chat_distribution_aliases          = ["chat.staging.publishing.service.gov.uk"]
-    chat_certificate_arn                          = "arn:aws:acm:us-east-1:696911096973:certificate/642e34ef-71e2-439d-99f7-e79baf9ed482"
   }
 }
 

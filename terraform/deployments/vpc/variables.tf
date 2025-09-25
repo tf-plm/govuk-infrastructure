@@ -56,18 +56,3 @@ variable "legacy_private_subnets" {
     # }
   }
 }
-
-variable "legacy_public_subnets" {
-  type        = map(object({ az = string, cidr = string }))
-  description = "Map of {subnet_name: {az=<az>, cidr=<cidr>}} for the public subnets for legacy resources"
-  default     = {
-    subnet1 = {
-      az = "eu-west-1c"
-      cidr = "10.0.2.0/24"
-    }
-    # subnet2 = {
-    #   az = "az2"
-    #   cidr = "192.168.0.0/24"
-    # }
-  }
-}

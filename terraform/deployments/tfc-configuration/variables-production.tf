@@ -29,12 +29,6 @@ module "variable-set-production" {
       c = { az = "eu-west-1c", cidr = "10.13.32.0/22" }
     }
 
-    legacy_public_subnets = {
-      a = { az = "eu-west-1a", cidr = "10.13.1.0/24" }
-      b = { az = "eu-west-1b", cidr = "10.13.2.0/24" }
-      c = { az = "eu-west-1c", cidr = "10.13.3.0/24" }
-    }
-
     legacy_private_subnets = {
       a = { az = "eu-west-1a", cidr = "10.13.4.0/24", nat = true }
       b = { az = "eu-west-1b", cidr = "10.13.5.0/24", nat = true }
@@ -57,9 +51,8 @@ module "variable-set-production" {
 
     enable_kube_state_metrics = false
 
-    enable_arm_workers  = true
-    enable_main_workers = false
-    enable_x86_workers  = true
+    enable_arm_workers = true
+    enable_x86_workers = true
 
     publishing_service_domain = "publishing.service.gov.uk"
 
@@ -126,13 +119,6 @@ module "variable-set-chat-production" {
     chat_redis_cluster_multi_az_enabled           = true
     chat_redis_cluster_node_type                  = "cache.r6g.xlarge"
     chat_redis_cluster_num_cache_clusters         = "2"
-    cloudfront_create                             = true
-    cloudfront_enable                             = true
-    service_disabled                              = false
-    origin_chat_domain                            = "chat.eks.production.govuk.digital"
-    origin_chat_id                                = "Chat origin"
-    cloudfront_chat_distribution_aliases          = ["chat.publishing.service.gov.uk"]
-    chat_certificate_arn                          = "arn:aws:acm:us-east-1:172025368201:certificate/ea27535c-f48a-4755-b6ca-c048c880e02d"
   }
 }
 
