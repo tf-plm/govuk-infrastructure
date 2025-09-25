@@ -1,10 +1,10 @@
 terraform {
-  cloud {
-    organization = "govuk"
-    workspaces {
-      tags = ["vpc", "eks", "aws"]
-    }
-  }
+  # cloud {
+  #   organization = "govuk"
+  #   workspaces {
+  #     tags = ["vpc", "eks", "aws"]
+  #   }
+  # }
   required_version = "~> 1.10"
   required_providers {
     aws = {

@@ -38,12 +38,16 @@ resource "aws_route_table_association" "private_subnet" {
   route_table_id = aws_route_table.private_subnet[each.key].id
 }
 
-resource "aws_route" "private_subnet_nat" {
-  for_each               = local.nat_legacy_private_subnets
-  route_table_id         = aws_route_table.private_subnet[each.key].id
-  destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.private_subnet[each.value.az].id
-}
+# BPlan adjustments
+#
+# This resource was silently ignored by the provider during plan and apply
+# (not here (?) but this usually makes the diff always finding a change)
+# resource "aws_route" "private_subnet_nat" {
+#   for_each               = local.nat_legacy_private_subnets
+#   route_table_id         = aws_route_table.private_subnet[each.key].id
+#   destination_cidr_block = "0.0.0.0/0"
+#   nat_gateway_id         = aws_nat_gateway.private_subnet[each.value.az].id
+# }
 
 # Public subnets
 
