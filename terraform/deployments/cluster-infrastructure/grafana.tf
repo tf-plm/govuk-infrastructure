@@ -3,16 +3,235 @@ locals {
   grafana_service_account = "kube-prometheus-stack-grafana"
 }
 
-module "grafana_iam_role" {
-  source                        = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version                       = "~> 5.0"
-  create_role                   = true
-  role_name                     = "${local.grafana_service_account}-${module.eks.cluster_name}"
-  role_description              = "Role for Grafana to access AWS data sources. Corresponds to ${local.grafana_service_account} k8s ServiceAccount."
-  provider_url                  = module.eks.oidc_provider
-  role_policy_arns              = [aws_iam_policy.grafana.arn]
-  oidc_fully_qualified_subjects = ["system:serviceaccount:${local.monitoring_namespace}:${local.grafana_service_account}"]
+## BEGIN INLINE module grafana_iam_role
+
+# module "grafana_iam_role" {
+#   source                        = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+#   version                       = "~> 5.0"
+#   create_role                   = true
+#   role_name                     = "${local.grafana_service_account}-${module.eks.cluster_name}"
+#   role_description              = "Role for Grafana to access AWS data sources. Corresponds to ${local.grafana_service_account} k8s ServiceAccount."
+#   provider_url                  = module.eks.oidc_provider
+#   role_policy_arns              = [aws_iam_policy.grafana.arn]
+#   oidc_fully_qualified_subjects = ["system:serviceaccount:${local.monitoring_namespace}:${local.grafana_service_account}"]
+# }
+
+# INPUTS module grafana_iam_role
+locals {
+  modin_grafana_iam_role_create_role = true
+  modin_grafana_iam_role_provider_url = module.eks.oidc_provider
+  modin_grafana_iam_role_provider_urls = []
+  modin_grafana_iam_role_aws_account_id = ""
+  modin_grafana_iam_role_tags = {}
+  modin_grafana_iam_role_role_name = "${local.grafana_service_account}-${module.eks.cluster_name}"
+  modin_grafana_iam_role_role_name_prefix = null
+  modin_grafana_iam_role_role_description = "Role for Grafana to access AWS data sources. Corresponds to ${local.grafana_service_account} k8s ServiceAccount."
+  modin_grafana_iam_role_role_path = "/"
+  modin_grafana_iam_role_role_permissions_boundary_arn = ""
+  modin_grafana_iam_role_max_session_duration = 3600
+  modin_grafana_iam_role_role_policy_arns = [aws_iam_policy.grafana.arn]
+  modin_grafana_iam_role_number_of_role_policy_arns = null
+  modin_grafana_iam_role_inline_policy_statements = []
+  modin_grafana_iam_role_oidc_fully_qualified_subjects = ["system:serviceaccount:${local.monitoring_namespace}:${local.grafana_service_account}"]
+  modin_grafana_iam_role_oidc_subjects_with_wildcards = []
+  modin_grafana_iam_role_oidc_fully_qualified_audiences = []
+  modin_grafana_iam_role_force_detach_policies = false
+  modin_grafana_iam_role_allow_self_assume_role = false
+  modin_grafana_iam_role_provider_trust_policy_conditions = []
 }
+
+## OUTPUTS module grafana_iam_role
+locals {
+  modout_grafana_iam_role_iam_role_arn =  try(aws_iam_role.mod_grafana_iam_role_this[0].arn, "")
+  modout_grafana_iam_role_iam_role_name = try(aws_iam_role.mod_grafana_iam_role_this[0].name, "")
+  modout_grafana_iam_role_iam_role_path = try(aws_iam_role.mod_grafana_iam_role_this[0].path, "")
+  modout_grafana_iam_role_iam_role_unique_id = try(aws_iam_role.mod_grafana_iam_role_this[0].unique_id, "")
+}
+
+## RESOURCES
+
+locals {
+  mod_grafana_iam_role_aws_account_id = local.modin_grafana_iam_role_aws_account_id != "" ? local.modin_grafana_iam_role_aws_account_id : data.aws_caller_identity.mod_grafana_iam_role_current.account_id
+  mod_grafana_iam_role_partition      = data.aws_partition.mod_grafana_iam_role_current.partition
+  # clean URLs of https:// prefix
+  mod_grafana_iam_role_urls = [
+    for url in compact(distinct(concat(local.modin_grafana_iam_role_provider_urls, [local.modin_grafana_iam_role_provider_url]))) :
+    replace(url, "https://", "")
+  ]
+  mod_grafana_iam_role_number_of_role_policy_arns = coalesce(local.modin_grafana_iam_role_number_of_role_policy_arns, length(local.modin_grafana_iam_role_role_policy_arns))
+  mod_grafana_iam_role_role_name_condition        = local.modin_grafana_iam_role_role_name != null ? local.modin_grafana_iam_role_role_name : "${local.modin_grafana_iam_role_role_name_prefix}*"
+}
+
+data "aws_caller_identity" "mod_grafana_iam_role_current" {}
+data "aws_partition" "mod_grafana_iam_role_current" {}
+
+data "aws_iam_policy_document" "mod_grafana_iam_role_assume_role_with_oidc" {
+  count = local.modin_grafana_iam_role_create_role ? 1 : 0
+
+  dynamic "statement" {
+    # https://aws.amazon.com/blogs/security/announcing-an-update-to-iam-role-trust-policy-behavior/
+    for_each = local.modin_grafana_iam_role_allow_self_assume_role ? [1] : []
+
+    content {
+      sid     = "ExplicitSelfRoleAssumption"
+      effect  = "Allow"
+      actions = ["sts:AssumeRole"]
+
+      principals {
+        type        = "AWS"
+        identifiers = ["*"]
+      }
+
+      condition {
+        test     = "ArnLike"
+        variable = "aws:PrincipalArn"
+        values   = ["arn:${local.mod_grafana_iam_role_partition}:iam::${data.aws_caller_identity.mod_grafana_iam_role_current.account_id}:role${local.modin_grafana_iam_role_role_path}${local.mod_grafana_iam_role_role_name_condition}"]
+      }
+    }
+  }
+
+  dynamic "statement" {
+    for_each = local.mod_grafana_iam_role_urls
+
+    content {
+      effect  = "Allow"
+      actions = ["sts:AssumeRoleWithWebIdentity", "sts:TagSession"]
+
+      principals {
+        type = "Federated"
+
+        identifiers = ["arn:${data.aws_partition.mod_grafana_iam_role_current.partition}:iam::${local.mod_grafana_iam_role_aws_account_id}:oidc-provider/${statement.value}"]
+      }
+
+      dynamic "condition" {
+        for_each = length(local.modin_grafana_iam_role_oidc_fully_qualified_subjects) > 0 ? local.mod_grafana_iam_role_urls : []
+
+        content {
+          test     = "StringEquals"
+          variable = "${statement.value}:sub"
+          values   = local.modin_grafana_iam_role_oidc_fully_qualified_subjects
+        }
+      }
+
+      dynamic "condition" {
+        for_each = length(local.modin_grafana_iam_role_oidc_subjects_with_wildcards) > 0 ? local.mod_grafana_iam_role_urls : []
+
+        content {
+          test     = "StringLike"
+          variable = "${statement.value}:sub"
+          values   = local.modin_grafana_iam_role_oidc_subjects_with_wildcards
+        }
+      }
+
+      dynamic "condition" {
+        for_each = length(local.modin_grafana_iam_role_oidc_fully_qualified_audiences) > 0 ? local.mod_grafana_iam_role_urls : []
+
+        content {
+          test     = "StringLike"
+          variable = "${statement.value}:aud"
+          values   = local.modin_grafana_iam_role_oidc_fully_qualified_audiences
+        }
+      }
+
+      dynamic "condition" {
+        for_each = local.modin_grafana_iam_role_provider_trust_policy_conditions
+
+        content {
+          test     = condition.value.test
+          values   = condition.value.values
+          variable = condition.value.variable
+        }
+      }
+    }
+  }
+}
+
+resource "aws_iam_role" "mod_grafana_iam_role_this" {
+  count = local.modin_grafana_iam_role_create_role ? 1 : 0
+
+  name                 = local.modin_grafana_iam_role_role_name
+  name_prefix          = local.modin_grafana_iam_role_role_name_prefix
+  description          = local.modin_grafana_iam_role_role_description
+  path                 = local.modin_grafana_iam_role_role_path
+  max_session_duration = local.modin_grafana_iam_role_max_session_duration
+
+  force_detach_policies = local.modin_grafana_iam_role_force_detach_policies
+  permissions_boundary  = local.modin_grafana_iam_role_role_permissions_boundary_arn
+
+  assume_role_policy = data.aws_iam_policy_document.mod_grafana_iam_role_assume_role_with_oidc[0].json
+
+  tags = local.modin_grafana_iam_role_tags
+}
+
+resource "aws_iam_role_policy_attachment" "mod_grafana_iam_role_custom" {
+  count = local.modin_grafana_iam_role_create_role ? local.mod_grafana_iam_role_number_of_role_policy_arns : 0
+
+  role       = aws_iam_role.mod_grafana_iam_role_this[0].name
+  policy_arn = local.modin_grafana_iam_role_role_policy_arns[count.index]
+}
+
+###############################
+# IAM Role Inline policy
+###############################
+
+locals {
+  mod_grafana_iam_role_create_iam_role_inline_policy = local.modin_grafana_iam_role_create_role && length(local.modin_grafana_iam_role_inline_policy_statements) > 0
+}
+
+data "aws_iam_policy_document" "mod_grafana_iam_role_inline" {
+  count = local.mod_grafana_iam_role_create_iam_role_inline_policy ? 1 : 0
+
+  dynamic "statement" {
+    for_each = local.modin_grafana_iam_role_inline_policy_statements
+
+    content {
+      sid           = try(statement.value.sid, null)
+      actions       = try(statement.value.actions, null)
+      not_actions   = try(statement.value.not_actions, null)
+      effect        = try(statement.value.effect, null)
+      resources     = try(statement.value.resources, null)
+      not_resources = try(statement.value.not_resources, null)
+
+      dynamic "principals" {
+        for_each = try(statement.value.principals, [])
+
+        content {
+          type        = principals.value.type
+          identifiers = principals.value.identifiers
+        }
+      }
+
+      dynamic "not_principals" {
+        for_each = try(statement.value.not_principals, [])
+
+        content {
+          type        = not_principals.value.type
+          identifiers = not_principals.value.identifiers
+        }
+      }
+
+      dynamic "condition" {
+        for_each = try(statement.value.conditions, [])
+
+        content {
+          test     = condition.value.test
+          values   = condition.value.values
+          variable = condition.value.variable
+        }
+      }
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "mod_grafana_iam_role_inline" {
+  count = local.mod_grafana_iam_role_create_iam_role_inline_policy ? 1 : 0
+
+  role        = aws_iam_role.mod_grafana_iam_role_this[0].name
+  name_prefix = "${local.modin_grafana_iam_role_role_name}_inline_"
+  policy      = data.aws_iam_policy_document.mod_grafana_iam_role_inline[0].json
+}
+
+## END INLINED module grafana_iam_role
 
 data "aws_iam_policy_document" "grafana" {
   statement {

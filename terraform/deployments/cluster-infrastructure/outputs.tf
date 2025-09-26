@@ -110,7 +110,7 @@ output "aws_ebs_csi_driver_controller_service_account_name" {
 
 output "grafana_iam_role_arn" {
   description = "IAM role ARN corresponding to the k8s service account for Grafana."
-  value       = module.grafana_iam_role.iam_role_arn
+  value       = local.modout_grafana_iam_role_iam_role_arn
 }
 
 output "monitoring_namespace" {
